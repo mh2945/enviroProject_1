@@ -1,22 +1,29 @@
 import SwiftUI
 
+/// 로그인 화면 뷰
+/// - 이메일/비밀번호 로그인, 소셜 로그인, 회원가입 기능 제공
+/// - 2024.02.26: 자동 로그인 기능 및 로딩 인디케이터 추가
 struct LoginView: View {
-    @StateObject private var authViewModel = AuthViewModel()
+    @EnvironmentObject var authViewModel: AuthViewModel
     @State private var email = ""
     @State private var password = ""
     @State private var showSignUp = false
     @State private var showResetPassword = false
     @State private var isLoading = false
+    @State private var showLoadingAlert = false
+    @State private var enableAutoLogin = false  // 자동 로그인 상태
     
-    // 입력 값 유효성 검사
+    // 입력 값 유효성 검사 (마스터 계정용으로 수정)
     private var isValidEmail: Bool {
-        let emailRegex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
-        let emailPredicate = NSPredicate(format:"SELF MATCHES %@", emailRegex)
-        return emailPredicate.evaluate(with: email)
+        return !email.isEmpty
     }
     
     private var isValidPassword: Bool {
-        return password.count >= 6
+        return !password.isEmpty
+    }
+    
+    private var isValidForm: Bool {
+        return isValidEmail && isValidPassword
     }
     
     var body: some View {
@@ -71,6 +78,13 @@ struct LoginView: View {
                         .font(.caption)
                         .foregroundColor(.blue)
                         
+                        // 자동 로그인 체크박스 추가
+                        HStack {
+                            Toggle("자동 로그인", isOn: $enableAutoLogin)
+                                .tint(.green)
+                            Spacer()
+                        }
+                        
                         Button(action: performLogin) {
                             if isLoading {
                                 ProgressView()
@@ -112,6 +126,9 @@ struct LoginView: View {
                 .padding()
             }
             .navigationBarHidden(true)
+            .alert("로그인 중...", isPresented: $showLoadingAlert) {
+                // 로딩 알림은 버튼이 필요 없음
+            }
             .alert("오류", isPresented: .constant(authViewModel.errorMessage != nil)) {
                 Button("확인") {
                     authViewModel.errorMessage = nil
@@ -125,18 +142,25 @@ struct LoginView: View {
         }
     }
     
-    private var isValidForm: Bool {
-        isValidEmail && isValidPassword
-    }
-    
+    /// 로그인 수행 함수
+    /// - 로딩 상태 표시 및 자동 로그인 설정 처리
+    /// - 2024.02.26: 로딩 알림 및 자동 로그인 옵션 추가
     private func performLogin() {
         isLoading = true
+        showLoadingAlert = true
+        
         Task {
             do {
-                try await authViewModel.login(email: email, password: password)
+                try await authViewModel.login(
+                    email: email,
+                    password: password,
+                    enableAutoLogin: enableAutoLogin
+                )
                 isLoading = false
+                showLoadingAlert = false
             } catch {
                 isLoading = false
+                showLoadingAlert = false
             }
         }
     }

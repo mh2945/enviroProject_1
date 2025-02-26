@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct ProfileView: View {
+    @EnvironmentObject var authViewModel: AuthViewModel
+    @State private var showLogoutAlert = false
+    
     var body: some View {
         NavigationView {
             List {
@@ -11,7 +14,7 @@ struct ProfileView: View {
                             .foregroundColor(.green)
                         
                         VStack(alignment: .leading) {
-                            Text("환경 지킴이")
+                            Text(authViewModel.user?.nickname ?? "환경 지킴이")
                                 .font(.title2)
                             Text("Level 5")
                                 .foregroundColor(.secondary)
@@ -35,9 +38,28 @@ struct ProfileView: View {
                     NavigationLink("연동된 기기") {
                         Text("연동된 기기")
                     }
+                    
+                    // 로그아웃 버튼 추가
+                    Button(role: .destructive) {
+                        showLogoutAlert = true
+                    } label: {
+                        HStack {
+                            Text("로그아웃")
+                            Spacer()
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                        }
+                    }
                 }
             }
             .navigationTitle("프로필")
+            .alert("로그아웃", isPresented: $showLogoutAlert) {
+                Button("취소", role: .cancel) { }
+                Button("로그아웃", role: .destructive) {
+                    authViewModel.signOut()
+                }
+            } message: {
+                Text("정말 로그아웃 하시겠습니까?")
+            }
         }
     }
 }
