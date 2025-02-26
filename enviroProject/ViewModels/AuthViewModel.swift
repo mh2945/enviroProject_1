@@ -85,6 +85,7 @@ class AuthViewModel: ObservableObject {
     /// - UserDefaults에 저장된 로그인 정보 확인
     /// - 2024.02.26: 자동 로그인 활성화 여부 확인 로직 추가
     private func checkAutoLogin() {
+        // 자동 로그인이 활성화되어 있는 경우에만 시도
         if UserDefaults.standard.bool(forKey: "autoLoginEnabled"),
            let savedEmail = UserDefaults.standard.string(forKey: "savedEmail") {
             Task {
