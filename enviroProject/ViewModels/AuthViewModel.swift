@@ -5,28 +5,40 @@ class AuthViewModel: ObservableObject {
     @Published var user: User?
     @Published var errorMessage: String?
     
+    // 마스터 계정 정보
+    private let masterEmail = "admin"
+    private let masterPassword = "0000"
+    
     init() {
-        // 자동 로그인 체크
         checkAutoLogin()
     }
     
-    func login(email: String, password: String) async throws {
-        // 실제 서버 통신 로직이 들어갈 자리
-        do {
-            // 임시 로그인 성공 처리
-            let user = User(id: UUID(), email: email, nickname: "환경 지킴이")
+    func login(email: String, password: String, enableAutoLogin: Bool = false) async throws {
+        // 마스터 계정 확인
+        if email == masterEmail && password == masterPassword {
+            let user = User(id: UUID(), email: email, nickname: "관리자")
             await MainActor.run {
                 self.user = user
                 self.isAuthenticated = true
-                // 자동 로그인을 위한 사용자 정보 저장
-                UserDefaults.standard.set(email, forKey: "savedEmail")
+                // 자동 로그인이 체크된 경우에만 저장
+                if enableAutoLogin {
+                    UserDefaults.standard.set(email, forKey: "savedEmail")
+                    UserDefaults.standard.set(true, forKey: "autoLoginEnabled")
+                }
             }
-        } catch {
-            await MainActor.run {
-                self.errorMessage = "로그인에 실패했습니다."
-            }
-            throw error
+            return
         }
+        
+        // 마스터 계정이 아닌 경우 로그인 실패
+        await MainActor.run {
+            self.errorMessage = "로그인에 실패했습니다."
+        }
+        throw AuthError.invalidCredentials
+    }
+    
+    // 에러 타입 정의
+    enum AuthError: Error {
+        case invalidCredentials
     }
     
     func signUp(email: String, password: String, nickname: String) async throws {
@@ -52,14 +64,17 @@ class AuthViewModel: ObservableObject {
     func signOut() {
         self.user = nil
         self.isAuthenticated = false
+        // 로그아웃 시 자동 로그인 정보 삭제
         UserDefaults.standard.removeObject(forKey: "savedEmail")
+        UserDefaults.standard.removeObject(forKey: "autoLoginEnabled")
     }
     
     private func checkAutoLogin() {
-        if let savedEmail = UserDefaults.standard.string(forKey: "savedEmail") {
-            // 저장된 이메일이 있으면 자동 로그인 시도
+        // 자동 로그인이 활성화되어 있는 경우에만 시도
+        if UserDefaults.standard.bool(forKey: "autoLoginEnabled"),
+           let savedEmail = UserDefaults.standard.string(forKey: "savedEmail") {
             Task {
-                try await login(email: savedEmail, password: "")
+                try? await login(email: savedEmail, password: masterPassword)
             }
         }
     }
