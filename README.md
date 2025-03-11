@@ -99,7 +99,7 @@ API 인증: JWT (JSON Web Token)
 
 ## CI/CD
 
-CI 도구: Jenkins, GitLab CI
+CI 도구: GitAction, Jenkins
 배포 도구: Fastlane, TestFlight
 
 
